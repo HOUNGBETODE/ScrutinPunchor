@@ -1,0 +1,7 @@
+custom_wheel
+__pycache__
+malicious
+env
+scrutinpunchor.db
+__modules__.py
+env.ini
