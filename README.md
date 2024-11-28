@@ -15,6 +15,7 @@ Before doing anything, you need to configure :
 - after that, run `python3 main.py` and follow the steps
 
 ### For CLI environment
+rabbitmq - django backend (producer) - slack - tool on userside (consumer)
 #### First thing to do
 - go to `app` folder
 - create a python environment using `python3 -m venv env`
