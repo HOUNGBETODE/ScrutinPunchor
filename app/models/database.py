@@ -4,8 +4,6 @@ from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, Str
 
 
 db_url = "sqlite:///scrutinpunchor.db"
-# password = "S3cUr6Pr0Jects@!!!"
-# db_url = f"sqlite+pysqlcipher://:{password}@/scrutin_punchor.db"
 
 engine = create_engine(db_url)
 
@@ -60,12 +58,23 @@ class Log(Base):
     destination = Column(String(500)) # useful for COPY and MOVE events
     file_type = Column(String(10)) 
     observed_at = Column(DateTime, default=datetime.datetime.utcnow)
-    from_sp = Column(Boolean, default = False) # tell us whether the events come from ScrutinPunchor or not
-                                               # it helps a lot in GUARDIAN mode preventing duplicates alerts
-
+    
     user_id = Column(Integer, ForeignKey("users.id"), nullable = False)
 
     alerts = relationship("Alert", backref = "log")
+
+
+# logtorchs table - this is a smooth copy of logs table
+class LogTorch(Base):
+    __tablename__ = "logstorches"
+
+    id = Column(Integer, primary_key = True)
+    event = Column(Enum(LogEvent))
+    source = Column(String(500), nullable = False, default="")
+    destination = Column(String(500), default="") # useful for COPY and MOVE events
+    file_type = Column(String(10), default="") 
+
+    user_id = Column(Integer, ForeignKey("users.id"), nullable = False)
 
 
 # alerts table - store data about any potential attack identified by scrutin_punchor
@@ -73,7 +82,6 @@ class Alert(Base):
     __tablename__ = "alerts"
 
     id = Column(Integer, primary_key = True)
-    vuln_name = Column(String(500), nullable = False)
     analysis_result = Column(String(10**10)) # store a summary of analysis done by our 3 detection engines
     identified_at = Column(DateTime, default=datetime.datetime.utcnow)
 

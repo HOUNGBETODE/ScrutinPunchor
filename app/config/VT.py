@@ -1,6 +1,5 @@
 from configparser import ConfigParser
 
-# for VirusTotal X-ApiKey header
 def load(filename="config/env.ini", section="virus-total"):
     parser = ConfigParser()
     parser.read(filename)

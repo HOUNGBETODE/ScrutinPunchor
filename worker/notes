@@ -1,0 +1,68 @@
+Microsoft Windows [version 10.0.22631.4391]
+(c) Microsoft Corporation. Tous droits réservés.
+
+C:\Users\HP>py
+Python 3.12.2 (tags/v3.12.2:6abddd9, Feb  6 2024, 21:26:36) [MSC v.1937 64 bit (AMD64)] on win32
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import os, vt
+>>> difference entre cybersecuritz et securite informatique
+  File "<stdin>", line 1
+    difference entre cybersecuritz et securite informatique
+               ^^^^^
+SyntaxError: invalid syntax
+>>> analyse forensic
+  File "<stdin>", line 1
+    analyse forensic
+            ^^^^^^^^
+SyntaxError: invalid syntax
+>>> notifier l'utilisateur en cas d'attaque
+  File "<stdin>", line 1
+    notifier l'utilisateur en cas d'attaque
+             ^
+SyntaxError: invalid syntax
+>>> document de mémoire à récipérer
+  File "<stdin>", line 1
+    document de mémoire à récipérer
+             ^^
+SyntaxError: invalid syntax
+>>> document mal structuré
+  File "<stdin>", line 1
+    document mal structuré
+             ^^^
+SyntaxError: invalid syntax
+>>> objectifs spécifiques
+  File "<stdin>", line 1
+    objectifs spécifiques
+              ^^^^^^^^^^^
+SyntaxError: invalid syntax
+>>> méthodologique, présentation
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+NameError: name 'méthodologique' is not defined
+>>> éviter les affirmations gratuites et donner les preuves
+  File "<stdin>", line 1
+    éviter les affirmations gratuites et donner les preuves
+           ^^^
+SyntaxError: invalid syntax
+>>> la partie 2 n'a pas sa place
+  File "<stdin>", line 1
+    la partie 2 n'a pas sa place
+                 ^
+SyntaxError: unterminated string literal (detected at line 1)
+>>> partie 2 + partie 3
+  File "<stdin>", line 1
+    partie 2 + partie 3
+           ^
+SyntaxError: invalid syntax
+>>> partie2 = réponse à la problématique
+  File "<stdin>", line 1
+    partie2 = réponse à la problématique
+                      ^
+SyntaxError: invalid syntax
+>>> réduire le nombre de pages
+  File "<stdin>", line 1
+    réduire le nombre de pages
+            ^^
+SyntaxError: invalid syntax
+>>> virer les affirmations gratuites
+limiter le dovument à 40 - 45 pages

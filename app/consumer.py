@@ -4,8 +4,10 @@ import filehash, json, jwt, os, pika, sys
 from models.database import LogEvent
 from cryptography.fernet import Fernet
 from controllers.utils import (
-    read_from_file_table, save_to_file_table, setPact,
-    action_on_create, action_on_modify, action_on_move, action_on_delete, mark_as_deleted
+    read_from_file_table, save_to_file_table, setPact, mark_as_deleted
+)
+from controllers.modes.guardian.gui import (
+    action_on_create, action_on_modify, action_on_move, action_on_delete
 )
 
 def mainT(user_id, user_pseudo):
@@ -24,7 +26,6 @@ def mainT(user_id, user_pseudo):
 
     def callback(ch, method, properties, body):
         print(body)
-        # getting variables from request body
         CRYPTO_KEYS = CRYPT.load()
         data = jwt.decode(body, CRYPTO_KEYS["jwtk"], algorithms=['HS256'])
         body_in_data = json.loads(
@@ -34,7 +35,6 @@ def mainT(user_id, user_pseudo):
         trusted_in_data = data["trusted"]
         print(data)
         print(body_in_data)
-        # performing computations and making decisions
         if body_in_data["scrutin-punchor-mode"][:8] == "GUARDIAN":
             if len(body_in_data["scrutin-punchor-mode"]) > 8:
                 if trusted_in_data:
@@ -44,13 +44,11 @@ def mainT(user_id, user_pseudo):
                     save_to_file_table(full_file_path, filesha512hash)
                     ftp.ftp_put(full_file_path, user_id)
             else:
-                # extract event data
                 event_name = body_in_data["event"]
                 event = LogEvent.CREATED if event_name == "created" else LogEvent.MODIFIED if event_name == "modified" else LogEvent.MOVED if event_name == "moved" else LogEvent.DELETED
-                # extract other data from body_in_data
-                source = body_in_data.get("source", None)
-                destination = body_in_data.get("destination", None)
-                file_type = body_in_data.get("filetype", None)
+                source = body_in_data.get("source", "")
+                destination = body_in_data.get("destination", "")
+                file_type = body_in_data.get("filetype", "")
                 user_id = body_in_data.get("user_id", None)
                 match event_name:
                     case "created":
@@ -59,8 +57,7 @@ def mainT(user_id, user_pseudo):
                                 event = LogEvent.DELETED, 
                                 file_type = file_type, 
                                 source = source, 
-                                user_id = user_id, 
-                                from_sp = True
+                                user_id = user_id
                             )
                             if file_type == "folder":
                                 for tuple_choices in list(os.walk(source)):
@@ -74,7 +71,6 @@ def mainT(user_id, user_pseudo):
                                             from_sp = True
                                         )
                                         os.remove(to_erase)
-                                    # if tuple_choices[0] != cr
                                 os.rmdir(source)
                             elif file_type == "file":
                                 os.remove(source)
@@ -83,7 +79,6 @@ def mainT(user_id, user_pseudo):
                                 filesha512hash = filehash.FileHash("sha512").hash_file(source)
                                 save_to_file_table(source, filesha512hash)
                             ftp.ftp_put(source, user_id)
-                    #
                     case "modified":
                         if not trusted_in_data:
                             setPact(
@@ -99,7 +94,6 @@ def mainT(user_id, user_pseudo):
                             filesha512hash = filehash.FileHash("sha512").hash_file(source)
                             save_to_file_table(source, filesha512hash)
                             ftp.ftp_put(source, user_id)
-                    #
                     case "moved":
                         if not trusted_in_data:
                             setPact(
@@ -116,7 +110,6 @@ def mainT(user_id, user_pseudo):
                                 save_to_file_table(source, None, destination)
                             ftp.ftp_delete(source, user_id)
                             ftp.ftp_put(destination, user_id)
-                        #
                     case "deleted":
                         if not trusted_in_data:
                             setPact(
@@ -130,10 +123,8 @@ def mainT(user_id, user_pseudo):
                         else:
                             mark_as_deleted(source)
                             ftp.ftp_delete(source, user_id)
-        #
         elif body_in_data["scrutin-punchor-mode"][:7] == "WATCHER":
             pass
-        # printing something at the end
         print(f" [x] Received {body.decode()}")
 
     channel.basic_consume(
@@ -153,6 +144,3 @@ def consume(user_id, user_pseudo):
             sys.exit(0)
         except SystemExit:
             os._exit(0)
-
-
-consume(1, "user")

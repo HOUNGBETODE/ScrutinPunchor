@@ -12,15 +12,12 @@ import base64, io, json, jwt, os, random, smtplib, sys
 
 def obfuscate_data(data, pseudo_queue):
     CRYPTO_PARAMS = CRYPT.load()
-    # print(data)
-    # print(json.dumps(data))
     crypted_data = Fernet(CRYPTO_PARAMS["symk"].encode()).encrypt(json.dumps(data).encode()).decode()
     tokenized_data = jwt.encode(
         {"body": crypted_data, "pseudo_queue": pseudo_queue}, 
         CRYPTO_PARAMS["jwtk"], 
         algorithm='HS256'
     ).encode().hex()
-    # print(tokenized_data)
     tokenized_data_length = len(tokenized_data)
     random_seed = random.choice(list(range(tokenized_data_length)))
     tokenized_data_shuffled = tokenized_data[random_seed:] + tokenized_data[:random_seed]
@@ -30,16 +27,13 @@ def export_to_buffer(file_path):
     with open(file_path, 'rb') as file:
         buffer = io.StringIO(file.read())
     return buffer.getvalue()
-# attachment = MIMEApplication(export_to_buffer(message_body[filename]))
 
 def send_mail(receiver_mail, message_subject, message_type, message_body):
     gmail = Email.load()
-    # defining the mail headers
     multipart = MIMEMultipart()
     multipart['Subject'] = message_subject
     multipart['From'] = gmail['user']
     multipart['To'] = receiver_mail
-    # attaching content inside mail's body according to message_type
     match message_type:
         case "CODE":
             template = r"notifications\template.html"
@@ -73,15 +67,12 @@ def send_mail(receiver_mail, message_subject, message_type, message_body):
             multipart.attach(MIMEText(temp, 'html'))
         case _:
             return None
-    # connecting to the SMTP server with an email and password
     server = smtplib.SMTP_SSL('smtp.gmail.com')
     server.login(gmail['user'], gmail['password'])
     server.sendmail(gmail['user'], receiver_mail, multipart.as_string())
-    # closing the connection to the SMTP server
     server.quit()
 
 
-from storage import ftp
 from config import Email, SLACK
 from xhtml2pdf import pisa
 from getpass import getpass
@@ -89,13 +80,9 @@ from notifypy import Notify
 from termcolor import colored
 from sqlalchemy.orm import sessionmaker
 from concurrent.futures import ThreadPoolExecutor
-import filehash, pyautogui, re, requests, shutil, time
-from models.database import Code, File, Log, User, engine
+import pyautogui, re, requests, time
+from models.database import Code, File, Log, LogTorch, User, engine
 
-"""
-import pyfiglet
-pyfiglet.figlet_format(text)
-"""
 def banner():
     os.system('cls' if os.name == 'nt' else 'clear')
     print("""\033[93m
@@ -214,17 +201,6 @@ def validate_hids_mode(mode):
     else:
         inform(f"{mode} not a valid mode : choose between GUARDIAN or WATCHER")
 
-""" def list_all_folder_files(folder):
-    # declaring a function to print out all files located inside a directory
-    def display_file(tuple_arg):
-        folder = tuple_arg[0].replace("\\", "/")
-        for file in tuple_arg[2]:
-            print(f"(hids)@sp> {folder}/{file}")
-    # running the script with parallel tasks so as to speed the listing
-    inform("here comes the folder's files tree")
-    with ThreadPoolExecutor(os.cpu_count()) as executor:
-        executor.map(display_file, os.walk(folder)) """
-
 def notify(message, title = "SCRUTIN-PUNCHOR", audio_file = "media/sound.wav", icon_file = "media/author.png"):
     notification = Notify()
     notification.title = title
@@ -242,7 +218,7 @@ def throw_action(question):
 
 def countdown_timer(delay):
     RED = "\033[31m"
-    RESET = "\033[0m"  # Reset to default color
+    RESET = "\033[0m"
     for x in range(delay, -1, -1):
         seconds = x % 60
         minutes = int(x / 60) % 60
@@ -253,16 +229,23 @@ def countdown_timer(delay):
 
 def setPact(**kwargs):
     try:
-        create(Log, **kwargs) # get_or_create(Log, **kwargs)
+        create(LogTorch, **kwargs)
     except:
         pass
 
 def from_SP(**kwargs):
     with sessionmaker(bind=engine)() as session:
-        instance = session.query(Log).filter_by(**kwargs).order_by(Log.id.desc()).first()
-        if instance :
-            return instance.from_sp
+        if session.query(LogTorch).filter_by(**kwargs).first() :
+            return True
     return False
+
+def out_SP(**kwargs):
+    with sessionmaker(bind=engine)() as session:
+        # instance = session.query(Log).filter_by(**kwargs).order_by(Log.id.desc()).first()
+        instance = session.query(LogTorch).filter_by(**kwargs).first()
+        if instance :
+            session.delete(instance)
+            session.commit()
 
 def core_info():
     print(colored("""
@@ -277,35 +260,23 @@ def core_info():
         2.) """, "cyan") + colored("""C:/sensitive#WATCHER
     """, "red"))
 
-# def logFileSystemEvent(event, what, source, destination, user_id):
 def logFileSystemEvent(**kwargs):
     if kwargs.get("user_id", None):
-        # register log here into the database
-        log = create(Log, **kwargs) # get_or_create(Log, **kwargs)
+        log = create(Log, **kwargs)
         return log
 
-def create(model, **kwargs): # def get_or_create(model, **kwargs):
+def create(model, **kwargs):
     with sessionmaker(bind=engine)() as session:
-        # instance = session.query(model).filter_by(**kwargs).order_by(model.id.desc()).first()
-        # # Instance found, return it and indicate it wasn't created
-        # if instance:
-        #     return instance.id, False 
-        # Instance not found, create it, return it and indicate it was created
         instance = model(**kwargs)
         session.add(instance)
         session.commit()
-        return instance.id # return instance.id, True
-
-# print(setPact(event = "created", source = r"E:\__stage__\endProject\app\test\keyboard"))
+        return instance.id
 
 def convert_html_to_pdf(html_string, pdf_path):
     with open(pdf_path, "wb") as pdf_file:
         pisa_status = pisa.CreatePDF(html_string, dest=pdf_file)
     return not pisa_status.err
 
-
-
-# # # utilities for files
 def save_to_file_table(filepath, filesha512hash, newname = None):
     instance = None
     with sessionmaker(bind=engine)() as session:
@@ -341,175 +312,6 @@ def extract_patterns_from_file_table(pattern):
             name_hash_dict[instance.name] = instance.hash
     return name_hash_dict
 
-
-def init_checking_G_gui(folder, user_id):
-    previous_state = extract_patterns_from_file_table(folder)
-    previous_state_keys = list(previous_state.keys())
-    # declaring a function to print out all files located inside a directory
-    def checker(tuple_arg):
-        folder_path = tuple_arg[0].replace("\\", "/")
-        for file in tuple_arg[2]:
-            full_file_path = f"{folder_path}/{file}"
-            if full_file_path in previous_state_keys:
-                filesha512hash = filehash.FileHash("sha512").hash_file(full_file_path)
-                if filesha512hash != previous_state[full_file_path]:
-                    message = f"{full_file_path } has been modified quite a long time. Are you the one behind it ?"
-                    notify(message)
-                    if not throw_action(message):
-                        os.remove(full_file_path)
-                        ftp.ftp_get(full_file_path, user_id)
-                    else:
-                        save_to_file_table(full_file_path, filesha512hash)
-                        ftp.ftp_put(full_file_path, user_id)
-            else:
-                filesha512hash = filehash.FileHash("sha512").hash_file(full_file_path)
-                save_to_file_table(full_file_path, filesha512hash)
-                ftp.ftp_put(full_file_path, user_id)  # Assuming ftp_put is properly defined elsewhere
-
-    # running the script with parallel tasks so as to speed the listing
-    # inform("Here comes the folder's files tree")
-
-    with ThreadPoolExecutor(os.cpu_count()) as executor:
-        # Pass only the folder path using os.walk, and handle user_id in the function itself
-        executor.map(checker, os.walk(folder))
-
-
-def init_checking_G_cli(folder, user_id, user_pseudo, user_email):
-    previous_state = extract_patterns_from_file_table(folder)
-    previous_state_keys = list(previous_state.keys())
-    # declaring a function to print out all files located inside a directory
-    def checker(tuple_arg):
-        folder_path = tuple_arg[0].replace("\\", "/")
-        for file in tuple_arg[2]:
-            full_file_path = f"{folder_path}/{file}"
-            if full_file_path in previous_state_keys:
-                filesha512hash = filehash.FileHash("sha512").hash_file(full_file_path)
-                if filesha512hash != previous_state[full_file_path]:
-                    message = f"{full_file_path } has been modified quite a long time. Are you the one behind it ? Check your mail in order to react 😳."
-                    send_message_to_slack(message)
-                    # view consumer for actions
-                    send_mail(
-                        receiver_mail = user_email,
-                        message_subject = "User Awareness",
-                        message_type = "AWARENESS",
-                        message_body = {
-                            "pseudo": self.user_pseudo,
-                            "event": f"File {message}",
-                            "data": obfuscate_data(
-                                {
-                                    "scrutin-punchor-mode": "GUARDIAN at init_checking",
-                                    "source": full_file_path,
-                                    "filetype": "file",
-                                    "user_id": user_id,
-                                    "originate-timestamp": datetime.now().timestamp()
-                                },
-                                user_pseudo
-                            )
-                        }
-                    )
-            else:
-                filesha512hash = filehash.FileHash("sha512").hash_file(full_file_path)
-                save_to_file_table(full_file_path, filesha512hash)
-                ftp.ftp_put(full_file_path, user_id)  # Assuming ftp_put is properly defined elsewhere
-
-    # running the script with parallel tasks so as to speed the listing
-    with ThreadPoolExecutor(os.cpu_count()) as executor:
-        # Pass only the folder path using os.walk, and handle user_id in the function itself
-        executor.map(checker, os.walk(folder))
-
-
-from controllers.mdp import check_user_identity_on_confirm_box
-def action_on_create(created_file_type, created_file_path, user_id):
-    if not throw_action(f"{created_file_path} has just been created. Does such event come from you ?"):
-        if check_user_identity_on_confirm_box():
-            setPact(
-                event = LogEvent.DELETED, 
-                file_type = created_file_type, 
-                source = created_file_path, 
-                user_id = user_id, 
-                from_sp = True
-            )
-            if created_file_type == "folder":
-                for tuple_choices in list(os.walk(created_file_path)):
-                    for file in tuple_choices[-1]:
-                        to_erase = tuple_choices[0] + os.path.sep + file
-                        setPact(
-                            event = LogEvent.DELETED, 
-                            file_type = "file", 
-                            source = to_erase, 
-                            user_id = user_id, 
-                            from_sp = True
-                        )
-                        os.remove(to_erase)
-                    # if tuple_choices[0] != cr
-                os.rmdir(created_file_path)
-            elif created_file_type == "file":
-                os.remove(created_file_path)
-    else:
-        if check_user_identity_on_confirm_box():
-            if created_file_type == "file":
-                filesha512hash = filehash.FileHash("sha512").hash_file(created_file_path)
-                save_to_file_table(created_file_path, filesha512hash)
-            ftp.ftp_put(created_file_path, user_id)
-
-
-def action_on_modify(modified_file_type, modified_file_path, user_id):
-    if not throw_action(f"{modified_file_path} has just been modified. Does such event come from you ?"):
-        if check_user_identity_on_confirm_box():
-            setPact(
-                event = LogEvent.DELETED, 
-                file_type = modified_file_type, 
-                source = modified_file_path, 
-                user_id = user_id, 
-                from_sp = True
-            )
-            os.remove(modified_file_path)
-            ftp.ftp_get(modified_file_path, user_id)
-    else:
-        if check_user_identity_on_confirm_box():
-            filesha512hash = filehash.FileHash("sha512").hash_file(modified_file_path)
-            save_to_file_table(modified_file_path, filesha512hash)
-            ftp.ftp_put(modified_file_path, user_id)
-
-
-def action_on_move(moved_file_type, old_file_path, new_file_path, user_id):
-    if not throw_action(f"{old_file_path} has just been moved to {new_file_path}. Does such event come from you ?"):
-        if check_user_identity_on_confirm_box():
-            setPact(
-                event = LogEvent.MOVED, 
-                file_type = moved_file_type, 
-                source = new_file_path,
-                destination = old_file_path, 
-                user_id = user_id, 
-                from_sp = True
-            )
-            shutil.move(new_file_path, old_file_path)
-    else:
-        if check_user_identity_on_confirm_box():
-            if moved_file_type == "file":
-                save_to_file_table(moved_file_path, None, new_file_path)
-            ftp.ftp_delete(old_file_path, user_id)
-            ftp.ftp_put(new_file_path, user_id)
-
-
-def action_on_delete(deleted_file_type, deleted_file_path, user_id):
-    if not throw_action(f"{deleted_file_path} has just been deleted. Does such event come from you ?"):
-        if check_user_identity_on_confirm_box():
-            setPact(
-                event = LogEvent.CREATED, 
-                file_type = deleted_file_type, 
-                source = deleted_file_path,
-                user_id = user_id, 
-                from_sp = True
-            )
-            ftp.ftp_get(deleted_file_path, user_id)
-    else:
-        if check_user_identity_on_confirm_box():
-            mark_as_deleted(deleted_file_path)
-            ftp.ftp_delete(deleted_file_path, user_id)
-
-
-# # # send messages to slack instance
 def send_message_to_slack(message):
     """
     Send message to our slack channel #notifications as pylarm-sentinel user.

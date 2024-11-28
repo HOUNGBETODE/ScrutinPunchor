@@ -19,7 +19,6 @@ def show(user_pseudo : str, user_id : int, user_email : str):
             request_user_code = input("Your code : ")
             login_status = MFA_verify(request_user_pseudo = user_pseudo, request_user_code = request_user_code)
             if login_status == "verified" and user_id:
-                # print("LOGGED IN !!!")
                 core.show(user_id, user_pseudo, user_email)
             else:
                 show(user_pseudo, user_id, user_email)

@@ -1,12 +1,11 @@
-import ftplib, os
 from config import FTP
+import filehash, ftplib, os
 from models.database import LogEvent
-from controllers.utils import inform, setPact
+from controllers.utils import inform, save_to_file_table, setPact
 
 
 def ftp_put(path, user_id = None):
     if user_id:
-        # print(f"{path = }")
         dirname = basename = None
         if os.path.isdir(path):
             dirname = os.path.dirname(path)
@@ -15,19 +14,14 @@ def ftp_put(path, user_id = None):
             basename = os.path.basename(path).replace("\\", "/")
         ftp_server = FTP.load()
         try:
-            # Establish FTPS connection
             with ftplib.FTP_TLS(
                 ftp_server["host"],
                 ftp_server["username"],
                 ftp_server["password"]
             ) as session:
-                # Enable data encryption
                 session.prot_p()
-                # Create subdirectories
                 path_splitted = (str(user_id) + "/" + dirname).split("/")
-                # print(f"{path_splitted = }")
                 for path_part in path_splitted:
-                    # print(f"{path_part  =}")
                     try:
                         session.cwd(path_part)
                     except ftplib.all_errors:
@@ -37,11 +31,11 @@ def ftp_put(path, user_id = None):
                         except ftplib.all_errors as e:
                             print(str(e))
                             raise Exception("Cannot create directory chain %s" % path)
-                # Upload file
                 if basename:
                     with open(path, "rb") as file:
                         session.storbinary(f"STOR {basename}", file)
                 inform(f"File uploaded successfully to {user_id}/{path}")
+                save_to_file_table(path, filehash.FileHash("sha512").hash_file(path))
                 return True
         except Exception as e:
             inform(f"Error uploading file: {e}")
@@ -53,15 +47,12 @@ def ftp_get(path, user_id = None):
         path = str(user_id) + "/" + filename
         ftp_server = FTP.load()
         try:
-            # Establish FTPS connection
             with ftplib.FTP_TLS(
                 ftp_server["host"],
                 ftp_server["username"],
                 ftp_server["password"]
             ) as session:
-                # Enable data encryption
                 session.prot_p()
-                # Create subfolders in case they do not exist
                 current_path = ""
                 for folder_name in filename.split("/")[:-1]:
                     current_path += f"{folder_name}/"
@@ -70,29 +61,21 @@ def ftp_get(path, user_id = None):
                             event = LogEvent.CREATED, 
                             file_type = "folder", 
                             source = current_path,
-                            user_id = user_id, 
-                            from_sp = True
+                            user_id = user_id
                         )
                         os.mkdir(current_path)
-                # Download file
                 setPact(
                     event = LogEvent.CREATED, 
                     file_type = "file", 
                     source = filename,
-                    user_id = user_id, 
-                    from_sp = True
+                    user_id = user_id
                 )
                 setPact(
                     event = LogEvent.MODIFIED, 
                     file_type = "file", 
                     source = filename,
-                    user_id = user_id, 
-                    from_sp = True
+                    user_id = user_id
                 )
-                print(filename)
-                # print(open(filename, "rb").readline())
-                # print(path)
-                # print(filename)
                 with open(filename, "wb") as file:
                     session.retrbinary(f"RETR {path}", file.write)
                 inform(f"File downloaded successfully from {path}")
@@ -109,15 +92,12 @@ def ftp_delete(path, user_id = None):
         path = "/".join(path_splitted)
         ftp_server = FTP.load()
         try:
-            # Establish FTPS connection
             with ftplib.FTP_TLS(
                 ftp_server["host"],
                 ftp_server["username"],
                 ftp_server["password"]
             ) as session:
-                # Enable data encryption
                 session.prot_p()
-                # Cope with file deletion
                 session.cwd(path)
                 files = session.nlst()
                 if basename in files:
@@ -134,10 +114,3 @@ def ftp_delete(path, user_id = None):
                     raise Exception(path + "/" + basename)
         except Exception as e:
             inform(f"Error deleting file: {e}")
-
-
-# ftp_put(r"C:\Users\HP\Downloads\les-10-commandements-de-Dieu.pdf", user_id=2)
-# ftp_put(r"C:\Users\HP\sharing.py", user_id=2)
-# ftp_delete(r"C:\Users\HP\sharing.py", user_id=2)
-# ftp_get(r"C:\Users\HP\Downloads\les-10-commandements-de-Dieu.pdf", user_id=2)
-

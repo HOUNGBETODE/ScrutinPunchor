@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scrutin | Punchor | Worker</title>
+  </head>
+  <body>
+	<center>
+		<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+		{% if messages %}
+			{% for message in messages %}
+				<script>
+					swal("Scrutin | Punchor | Worker", '{{ message }}', '{{ message.tags }}');
+				</script>
+			{% endfor %}
+		{% endif %}
+	</center>
+  </body>
+</html>

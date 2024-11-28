@@ -18,7 +18,6 @@ def vuln_detection(file_path):
 
     results = {}
     with ThreadPoolExecutor() as executor:
-        # To keep track of running tasks
         running_tasks = {
             executor.submit(virusTotal.analysis, file_path): "VirusTotalEngine",
             executor.submit(quickSand.analysis, file_path): "QuickSandEngine",
@@ -33,10 +32,8 @@ def vuln_detection(file_path):
                 results[service_name] = result
             except Exception as e:
                 results[service_name] = f"Error: {str(e)}"
-    # print(results)
     result_values = list(results.values())
     if any(list(result_values)):
-        # print(list(result_values))
         inform(f"file {file_path} was suspected as nefarious.")
         mid_html_content_list = list(filter(lambda analysis : analysis is not None, result_values))
         send_message_to_slack(f"File {file_path} appears to be suspicious.\nActions need to be taken.")
@@ -45,7 +42,6 @@ def vuln_detection(file_path):
             html_string=start_html_content + "<hr/>".join(mid_html_content_list) + end_html_content,
             pdf_path=pdf_path
         )
-        # send attack report to user
         send_mail("moberenge@gmail.com",
                     "Alert Report",
                 "REPORT",
@@ -55,17 +51,11 @@ def vuln_detection(file_path):
         )
     return results
 
-# vuln_detection(r"C:\Users\HP\Downloads\russian_roulette.zip")
-# vuln_detection(r"E:\__stage__\endProject\app\malicious\windows_defender_deactivation_trial\dist\script.exe")
-
-
 def vuln_assess_on_loading(folder):
-    # declaring a function to asssess all files inside a directory
     def treatNassess(tuple_arg):
         folder = tuple_arg[0].replace("\\", "/")
         for file in tuple_arg[2]:
             vuln_detection(f"{folder}/{file}")
-    # running the script with parallel tasks so as to speed the assess
     with ThreadPoolExecutor(os.cpu_count()) as executor:
         executor.map(treatNassess, os.walk(folder))
 
@@ -81,7 +71,6 @@ class WLoggingEventHandler(FileSystemEventHandler):
 
     def on_any_event(self, event):
         current_datetime = datetime.now().strftime("%a %Y-%m-%d %H:%M:%S")
-        # ['dest_path', 'event_type', 'is_directory', 'is_synthetic', 'src_path']
         what = "directory" if event.is_directory else "file"
         source = event.src_path.replace("\\", "/")
         destination = event.dest_path
@@ -95,11 +84,9 @@ class WLoggingEventHandler(FileSystemEventHandler):
 def watch(folder_path, user_id):
     # vuln_assess_on_loading(folder_path)
 
-    # configuring the custom logger
     logger = logging.getLogger(' @_ScrutinPunchor_@ ')
     logger.setLevel(logging.DEBUG)
 
-    # displaying log messages into a file
     file_handler = logging.FileHandler(
         "logs/app.log", 
         mode = "a", 
@@ -114,7 +101,6 @@ def watch(folder_path, user_id):
 
     event_handler = WLoggingEventHandler(logger, user_id)
 
-    # creating the observer and scheduling the event handler
     observer = Observer()
     observer.schedule(
         event_handler, 
@@ -125,7 +111,7 @@ def watch(folder_path, user_id):
     observer.start()
     try:
         while True:
-            observer.join(timeout = 1)  # checking for new events periodically
+            observer.join(timeout = 1)
     except KeyboardInterrupt:
         observer.stop()
 
