@@ -21,6 +21,7 @@ rabbitmq - django backend (producer) - slack - tool on userside (consumer)
 - create a python environment using `python3 -m venv env`
 - activate that virtual environment
 - install prerequisites by running `pip -r intall requiremnts.txt`
+Before doing anything else, open `main.py` and comment lines 6 and 8 and manually run `python3 models/database.py`.
 - after that, run `python3 main.py` and follow the steps
 - create a user account and got `id` and `pseudo` in mind
 - then follow steps
